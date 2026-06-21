@@ -26,15 +26,15 @@ class QuestMenu:
         item.set_item_meta(meta)
         return item
 
-    def _on_menu_close(self, player: Player):
+    def _close_active(self, player: Player):
         uid = str(player.unique_id)
-        if uid in self.active_menus:
-            del self.active_menus[uid]
+        menu = self.active_menus.get(uid)
+        if menu:
+            menu.close(player)
 
     def _fill_nav(self, menu: Menu, page: int, total_pages: int, on_prev, on_next, on_back, show_back: bool = True):
-        barrier = self._barrier()
         for slot in NAV_BARRIER_SLOTS:
-            menu.set_item(slot, barrier)
+            menu.set_item(slot, self._barrier())
 
         prev_item = ItemStack("minecraft:arrow")
         meta = prev_item.item_meta
@@ -43,7 +43,7 @@ class QuestMenu:
         if page > 0:
             menu.set_item(NAV_PREV, prev_item, on_click=on_prev)
         else:
-            menu.set_item(NAV_PREV, barrier)
+            menu.set_item(NAV_PREV, self._barrier())
 
         page_item = ItemStack("minecraft:paper")
         meta = page_item.item_meta
@@ -58,7 +58,7 @@ class QuestMenu:
         if page < total_pages - 1:
             menu.set_item(NAV_NEXT, next_item, on_click=on_next)
         else:
-            menu.set_item(NAV_NEXT, barrier)
+            menu.set_item(NAV_NEXT, self._barrier())
 
         if show_back:
             back_item = ItemStack("minecraft:magma_cream")
@@ -67,7 +67,7 @@ class QuestMenu:
             back_item.set_item_meta(meta)
             menu.set_item(NAV_BACK, back_item, on_click=on_back)
         else:
-            menu.set_item(NAV_BACK, barrier)
+            menu.set_item(NAV_BACK, self._barrier())
 
     def open_categories_menu(self, player: Player, quest_player: QuestPlayer, page: int = 0):
         categories = list(self.quest_manager.get_categories().items())
@@ -85,21 +85,18 @@ class QuestMenu:
 
             def make_handler(cid=category_id):
                 def handler(p, s, i, inv):
-                    uid = str(p.unique_id)
-                    if uid in self.active_menus:
-                        self.active_menus[uid].close(p)
-                    self.open_quests_menu(p, quest_player, cid)
+                    self._open_quests(p, quest_player, cid)
                     return True
                 return handler
 
             menu.set_item(slot, item, on_click=make_handler())
 
         def on_prev(p, s, i, inv):
-            self._reopen_categories(p, quest_player, page - 1)
+            self._open_categories(p, quest_player, page - 1)
             return True
 
         def on_next(p, s, i, inv):
-            self._reopen_categories(p, quest_player, page + 1)
+            self._open_categories(p, quest_player, page + 1)
             return True
 
         self._fill_nav(
@@ -110,14 +107,11 @@ class QuestMenu:
             show_back=False
         )
 
-        menu.set_close_listener(self._on_menu_close)
         menu.send_to(player)
         self.active_menus[str(player.unique_id)] = menu
 
-    def _reopen_categories(self, player: Player, quest_player: QuestPlayer, page: int):
-        uid = str(player.unique_id)
-        if uid in self.active_menus:
-            self.active_menus[uid].close(player)
+    def _open_categories(self, player: Player, quest_player: QuestPlayer, page: int):
+        self._close_active(player)
         self.open_categories_menu(player, quest_player, page)
 
     def open_quests_menu(self, player: Player, quest_player: QuestPlayer, category_id: str, page: int = 0):
@@ -145,15 +139,15 @@ class QuestMenu:
             menu.set_item(slot, item, on_click=make_click_handler())
 
         def on_prev(p, s, i, inv):
-            self._reopen_quests(p, quest_player, category_id, page - 1)
+            self._open_quests(p, quest_player, category_id, page - 1)
             return True
 
         def on_next(p, s, i, inv):
-            self._reopen_quests(p, quest_player, category_id, page + 1)
+            self._open_quests(p, quest_player, category_id, page + 1)
             return True
 
         def on_back(p, s, i, inv):
-            self._reopen_back(p, quest_player)
+            self._open_categories(p, quest_player, 0)
             return True
 
         self._fill_nav(
@@ -163,21 +157,12 @@ class QuestMenu:
             on_back=on_back
         )
 
-        menu.set_close_listener(self._on_menu_close)
         menu.send_to(player)
         self.active_menus[str(player.unique_id)] = menu
 
-    def _reopen_quests(self, player: Player, quest_player: QuestPlayer, category_id: str, page: int):
-        uid = str(player.unique_id)
-        if uid in self.active_menus:
-            self.active_menus[uid].close(player)
+    def _open_quests(self, player: Player, quest_player: QuestPlayer, category_id: str, page: int = 0):
+        self._close_active(player)
         self.open_quests_menu(player, quest_player, category_id, page)
-
-    def _reopen_back(self, player: Player, quest_player: QuestPlayer):
-        uid = str(player.unique_id)
-        if uid in self.active_menus:
-            self.active_menus[uid].close(player)
-        self.open_categories_menu(player, quest_player)
 
     def _create_quest_item(self, quest: Quest, progress_data: dict) -> ItemStack:
         item = ItemStack("minecraft:paper")
@@ -212,15 +197,12 @@ class QuestMenu:
         progress = quest_player.get_progress(quest.id)
 
         if progress["claimed"]:
-            player.send_message("§cYa reclamaste esta misión, no puedes volverla a reclamar.")
+            player.play_sound(player.location, "mob.villager.no", volume=1.0, pitch=1.0)
             return
 
         if quest_player.can_claim(quest.id):
             self.reward_handler.give_reward(player, quest)
             quest_player.claim_reward(quest.id)
-            uid = str(player.unique_id)
-            if uid in self.active_menus:
-                self.active_menus[uid].close(player)
-            self.open_quests_menu(player, quest_player, category_id, page)
+            self._open_quests(player, quest_player, category_id, page)
         else:
-            player.send_message("§cAún no has completado esta misión.")
+            player.play_sound(player.location, "mob.villager.no", volume=1.0, pitch=1.0)
