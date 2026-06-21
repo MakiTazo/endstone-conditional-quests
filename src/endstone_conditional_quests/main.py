@@ -32,7 +32,12 @@ class QuestsPlugin(Plugin):
         self.logger.info("Conditional Quests enabled!")
 
     def on_disable(self):
-        self.logger.info("Conditional Quests disabled!")
+        self.logger.info("QuestsPlugin disabled!")
+        for menu in list(self.quest_menu.active_menus.values()):
+            try:
+                menu.close_all()
+            except Exception:
+                pass
         if self.db and self.db.connection:
             endstone_asyncio.submit(self.db.connection.close()).result()
 
