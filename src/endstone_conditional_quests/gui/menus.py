@@ -26,9 +26,9 @@ class QuestMenu:
         item.set_item_meta(meta)
         return item
 
-    def _on_menu_close(self, player: Player, closed_menu: Menu = None):
+    def _on_menu_close(self, player: Player):
         uid = str(player.unique_id)
-        if uid in self.active_menus and (closed_menu is None or self.active_menus[uid] is closed_menu):
+        if uid in self.active_menus:
             del self.active_menus[uid]
 
     def _fill_nav(self, menu: Menu, page: int, total_pages: int, on_prev, on_next, on_back, show_back: bool = True):
@@ -85,17 +85,28 @@ class QuestMenu:
 
             def make_handler(cid=category_id):
                 def handler(p, s, i, inv):
-                    self.active_menus[str(p.unique_id)].close(p)
+                    uid = str(p.unique_id)
+                    if uid in self.active_menus:
+                        self.active_menus[uid].close(p)
                     self.open_quests_menu(p, quest_player, cid)
+                    return True
                 return handler
 
             menu.set_item(slot, item, on_click=make_handler())
 
+        def on_prev(p, s, i, inv):
+            self._reopen_categories(p, quest_player, page - 1)
+            return True
+
+        def on_next(p, s, i, inv):
+            self._reopen_categories(p, quest_player, page + 1)
+            return True
+
         self._fill_nav(
             menu, page, total_pages,
-            on_prev=lambda p, s, i, inv: self._reopen_categories(p, quest_player, page - 1),
-            on_next=lambda p, s, i, inv: self._reopen_categories(p, quest_player, page + 1),
-            on_back=lambda p, s, i, inv: None,
+            on_prev=on_prev,
+            on_next=on_next,
+            on_back=lambda p, s, i, inv: True,
             show_back=False
         )
 
@@ -126,15 +137,30 @@ class QuestMenu:
             item = self._create_quest_item(quest, progress_data)
 
             def make_click_handler(q=quest, qp=quest_player):
-                return lambda p, s, i, inv: self._handle_click(p, q, qp, category_id, page)
+                def handler(p, s, i, inv):
+                    self._handle_click(p, q, qp, category_id, page)
+                    return True
+                return handler
 
             menu.set_item(slot, item, on_click=make_click_handler())
 
+        def on_prev(p, s, i, inv):
+            self._reopen_quests(p, quest_player, category_id, page - 1)
+            return True
+
+        def on_next(p, s, i, inv):
+            self._reopen_quests(p, quest_player, category_id, page + 1)
+            return True
+
+        def on_back(p, s, i, inv):
+            self._reopen_back(p, quest_player)
+            return True
+
         self._fill_nav(
             menu, page, total_pages,
-            on_prev=lambda p, s, i, inv: self._reopen_quests(p, quest_player, category_id, page - 1),
-            on_next=lambda p, s, i, inv: self._reopen_quests(p, quest_player, category_id, page + 1),
-            on_back=lambda p, s, i, inv: self._reopen_back(p, quest_player)
+            on_prev=on_prev,
+            on_next=on_next,
+            on_back=on_back
         )
 
         menu.set_close_listener(self._on_menu_close)
@@ -151,11 +177,7 @@ class QuestMenu:
         uid = str(player.unique_id)
         if uid in self.active_menus:
             self.active_menus[uid].close(player)
-        self.plugin.server.scheduler.run_task(
-            self.plugin,
-            lambda: self.open_categories_menu(player, quest_player),
-            delay=1
-        )
+        self.open_categories_menu(player, quest_player)
 
     def _create_quest_item(self, quest: Quest, progress_data: dict) -> ItemStack:
         item = ItemStack("minecraft:paper")
