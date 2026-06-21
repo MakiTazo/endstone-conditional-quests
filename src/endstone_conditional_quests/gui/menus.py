@@ -1,9 +1,9 @@
 from endstone import Player
 from endstone.inventory import ItemStack
 from jwinventoryapi import Menu, MenuType
-from endstone_quests.models.quest import Quest
-from endstone_quests.models.player import QuestPlayer
-from endstone_quests.utils.condition_parser import parse_condition
+from endstone_conditional_quests.models.quest import Quest
+from endstone_conditional_quests.models.player import QuestPlayer
+from endstone_conditional_quests.utils.condition_parser import parse_condition
 
 SLOTS_PER_PAGE = 45
 NAV_BARRIER_SLOTS = [45, 46, 48, 50, 52]
@@ -26,9 +26,9 @@ class QuestMenu:
         item.set_item_meta(meta)
         return item
 
-    def _on_menu_close(self, player: Player):
+    def _on_menu_close(self, player: Player, closed_menu: Menu = None):
         uid = str(player.unique_id)
-        if uid in self.active_menus:
+        if uid in self.active_menus and (closed_menu is None or self.active_menus[uid] is closed_menu):
             del self.active_menus[uid]
 
     def _fill_nav(self, menu: Menu, page: int, total_pages: int, on_prev, on_next, on_back, show_back: bool = True):
@@ -151,7 +151,11 @@ class QuestMenu:
         uid = str(player.unique_id)
         if uid in self.active_menus:
             self.active_menus[uid].close(player)
-        self.open_categories_menu(player, quest_player)
+        self.plugin.server.scheduler.run_task(
+            self.plugin,
+            lambda: self.open_categories_menu(player, quest_player),
+            delay=1
+        )
 
     def _create_quest_item(self, quest: Quest, progress_data: dict) -> ItemStack:
         item = ItemStack("minecraft:paper")
