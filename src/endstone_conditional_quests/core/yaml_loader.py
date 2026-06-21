@@ -36,30 +36,32 @@ class QuestLoader:
             "icon": "minecraft:zombie_spawn_egg",
             "name": "Mob Quests",
             "quests": {
-                "villager_avenger": {
-                    "name": "Villager Avenger",
-                    "description": "All for the villagers",
-                    "type": "kill_mob",
-                    "target": {
-                        "pillager": 500,
-                        "ravager": 200,
-                        "evoker": 50
-                    },
-                    "reward": {
-                        "type": "command",
-                        "value": "give {player} minecraft:emerald 500"
-                    }
-                },
                 "zombie_slayer": {
                     "name": "Zombie Slayer",
-                    "description": "Kill 50 zombies",
-                    "type": "kill_mob",
-                    "target": {
-                        "zombie": 50
-                    },
+                    "description": "Kill 500 zombies",
+                    "conditions": [
+                        "%jwstats_mob_kill_zombie% >= 500"
+                    ],
                     "reward": {
                         "type": "command",
-                        "value": "give {player} minecraft:diamond 5"
+                        "value": [
+                            "give {player} minecraft:diamond 64"
+                        ]
+                    }
+                },
+                "villager_avenger": {
+                    "name": "Villager Avenger",
+                    "description": "Revenge for the villagers",
+                    "conditions": [
+                        "%jwstats_mob_kill_pillager% >= 500",
+                        "%jwstats_mob_kill_ravager% >= 200",
+                        "%jwstats_mob_kill_evoker% >= 50"
+                    ],
+                    "reward": {
+                        "type": "command",
+                        "value": [
+                            "give {player} minecraft:emerald 500"
+                        ]
                     }
                 }
             }
@@ -71,14 +73,15 @@ class QuestLoader:
             "quests": {
                 "stone_breaker": {
                     "name": "Stone Breaker",
-                    "description": "Break 5000 stone blocks",
-                    "type": "break_block",
-                    "target": {
-                        "stone": 5000
-                    },
+                    "description": "Break 100 stone blocks",
+                    "conditions": [
+                        "%jwstats_block_break_stone% >= 100"
+                    ],
                     "reward": {
                         "type": "command",
-                        "value": "give {player} minecraft:emerald 64"
+                        "value": [
+                            "give {player} minecraft:emerald 3"
+                        ]
                     }
                 }
             }

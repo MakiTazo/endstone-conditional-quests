@@ -1,7 +1,7 @@
 from typing import Dict, List, Optional
 from endstone import asyncio as endstone_asyncio
-from endstone_contitional_quests.models.quest import Quest
-from endstone_contitional_quests.utils.condition_parser import parse_condition, evaluate_condition
+from endstone_conditional_quests.models.quest import Quest
+from endstone_conditional_quests.utils.condition_parser import parse_condition, evaluate_condition
 
 class QuestManager:
     def __init__(self, plugin, loader):
@@ -59,7 +59,7 @@ class QuestManager:
         if not papi:
             return
 
-        from endstone_contitional_quests.models.player import QuestPlayer
+        from endstone_conditional_quests.models.player import QuestPlayer
 
         for player in self.plugin.server.online_players:
             uuid = str(player.unique_id)

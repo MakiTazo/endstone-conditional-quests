@@ -14,7 +14,7 @@ def handler(plugin, sender, args):
         sender.send_message("§cOnly players can use this command")
         return True
 
-    from endstone_contitional_quests.models.player import QuestPlayer
+    from endstone_conditional_quests.models.player import QuestPlayer
     quest_player = QuestPlayer(str(sender.unique_id), sender.name, plugin.db, plugin.quest_manager)
 
     async def load_and_open():

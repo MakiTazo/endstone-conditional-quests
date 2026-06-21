@@ -1,0 +1,17 @@
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[project]
+name = "endstone-conditional-quests"
+version = "0.1.0"
+description = "Conditional Quests for Endstone"
+requires-python = ">=3.10"
+dependencies = [
+    "ruamel.yaml",
+    "aiomysql",
+    "aiosqlite"
+]
+
+[project.entry-points."endstone"]
+conditional-quests = "endstone_conditional_quests.main:QuestsPlugin"

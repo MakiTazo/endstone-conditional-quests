@@ -32,7 +32,7 @@ def handler(plugin, sender, args):
         sender.send_message(f"§cPlayer {args[1]} not found")
         return True
 
-    from endstone_contitional_quests.models.player import QuestPlayer
+    from endstone_conditional_quests.models.player import QuestPlayer
     quest_player = QuestPlayer(str(target_player.unique_id), target_player.name, plugin.db, plugin.quest_manager)
     action = args[0]
     quest_id = args[2]

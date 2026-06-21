@@ -1,5 +1,5 @@
 from typing import Dict
-from endstone_contitional_quests.core.database import PlayerDatabase
+from endstone_conditional_quests.core.database import PlayerDatabase
 
 class QuestPlayer:
     def __init__(self, uuid: str, name: str, database: PlayerDatabase, quest_manager):

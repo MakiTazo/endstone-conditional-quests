@@ -2,8 +2,8 @@ from endstone import Player
 from endstone.inventory import ItemStack
 from endstone import asyncio as endstone_asyncio
 from jwinventoryapi import Menu, MenuType
-from endstone_contitional_quests.models.quest import Quest
-from endstone_contitional_quests.models.player import QuestPlayer
+from endstone_conditional_quests.models.quest import Quest
+from endstone_conditional_quests.models.player import QuestPlayer
 
 SLOTS_PER_PAGE = 45
 NAV_BARRIER_SLOTS = [45, 46, 48, 50, 52]
@@ -46,7 +46,6 @@ class QuestMenu:
         meta.display_name = f"§fPage {page + 1}/{total_pages}"
         page_item.set_item_meta(meta)
         menu.set_item(NAV_PAGE, page_item)
-
         next_item = ItemStack("minecraft:arrow")
         meta = next_item.item_meta
         meta.display_name = "§eNext Page"
@@ -168,8 +167,13 @@ class QuestMenu:
             lore.append("§cLocked")
         else:
             for condition in quest.conditions:
-                resolved = progress_data["target_progress"].get(condition, "?")
-                lore.append(f"§e{condition} (current: {resolved})")
+                parsed = parse_condition(condition)
+                resolved = progress_data["target_progress"].get(condition, "0")
+                if parsed:
+                    _, operator, expected = parsed
+                    lore.append(f"§e{resolved}/{expected:g}")
+                else:
+                    lore.append(f"§e{resolved}")
 
         if progress_data["claimed"]:
             lore.append("§7[Claimed]")

@@ -1,12 +1,12 @@
 from endstone.plugin import Plugin
 from endstone.command import Command, CommandSender
-from endstone_contitional_quests.commands import preloaded_commands, preloaded_handlers
-from endstone_contitional_quests.core.config import Config
-from endstone_contitional_quests.core.yaml_loader import QuestLoader
-from endstone_contitional_quests.core.quest_manager import QuestManager
-from endstone_contitional_quests.core.database import PlayerDatabase
-from endstone_contitional_quests.gui.menus import QuestMenu
-from endstone_contitional_quests.utils.reward_handler import RewardHandler
+from endstone_conditional_quests.commands import preloaded_commands, preloaded_handlers
+from endstone_conditional_quests.core.config import Config
+from endstone_conditional_quests.core.yaml_loader import QuestLoader
+from endstone_conditional_quests.core.quest_manager import QuestManager
+from endstone_conditional_quests.core.database import PlayerDatabase
+from endstone_conditional_quests.gui.menus import QuestMenu
+from endstone_conditional_quests.utils.reward_handler import RewardHandler
 from endstone import asyncio as endstone_asyncio
 
 class QuestsPlugin(Plugin):

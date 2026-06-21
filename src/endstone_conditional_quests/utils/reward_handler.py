@@ -1,5 +1,5 @@
 from endstone import Player
-from endstone_contitional_quests.models.quest import Quest
+from endstone_conditional_quests.models.quest import Quest
 
 class RewardHandler:
     def __init__(self, plugin):
