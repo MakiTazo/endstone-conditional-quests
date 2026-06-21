@@ -1,9 +1,9 @@
 from endstone import Player
 from endstone.inventory import ItemStack
-from endstone import asyncio as endstone_asyncio
 from jwinventoryapi import Menu, MenuType
-from endstone_conditional_quests.models.quest import Quest
-from endstone_conditional_quests.models.player import QuestPlayer
+from endstone_quests.models.quest import Quest
+from endstone_quests.models.player import QuestPlayer
+from endstone_quests.utils.condition_parser import parse_condition
 
 SLOTS_PER_PAGE = 45
 NAV_BARRIER_SLOTS = [45, 46, 48, 50, 52]
@@ -11,7 +11,6 @@ NAV_PREV = 47
 NAV_PAGE = 49
 NAV_NEXT = 51
 NAV_BACK = 53
-
 
 class QuestMenu:
     def __init__(self, plugin, quest_manager, reward_handler):
@@ -26,6 +25,11 @@ class QuestMenu:
         meta.display_name = "§r"
         item.set_item_meta(meta)
         return item
+
+    def _on_menu_close(self, player: Player):
+        uid = str(player.unique_id)
+        if uid in self.active_menus:
+            del self.active_menus[uid]
 
     def _fill_nav(self, menu: Menu, page: int, total_pages: int, on_prev, on_next, on_back, show_back: bool = True):
         barrier = self._barrier()
@@ -46,6 +50,7 @@ class QuestMenu:
         meta.display_name = f"§fPage {page + 1}/{total_pages}"
         page_item.set_item_meta(meta)
         menu.set_item(NAV_PAGE, page_item)
+
         next_item = ItemStack("minecraft:arrow")
         meta = next_item.item_meta
         meta.display_name = "§eNext Page"
@@ -62,13 +67,14 @@ class QuestMenu:
             back_item.set_item_meta(meta)
             menu.set_item(NAV_BACK, back_item, on_click=on_back)
         else:
-            menu.set_item(NAV_BACK, self._barrier())
+            menu.set_item(NAV_BACK, barrier)
 
     def open_categories_menu(self, player: Player, quest_player: QuestPlayer, page: int = 0):
         categories = list(self.quest_manager.get_categories().items())
         total_pages = max(1, -(-len(categories) // SLOTS_PER_PAGE))
         start = page * SLOTS_PER_PAGE
         page_categories = categories[start:start + SLOTS_PER_PAGE]
+
         menu = Menu(MenuType.DOUBLE_CHEST, "§6Quests")
 
         for slot, (category_id, category) in enumerate(page_categories):
@@ -93,6 +99,7 @@ class QuestMenu:
             show_back=False
         )
 
+        menu.set_close_listener(self._on_menu_close)
         menu.send_to(player)
         self.active_menus[str(player.unique_id)] = menu
 
@@ -112,36 +119,27 @@ class QuestMenu:
         start = page * SLOTS_PER_PAGE
         page_quests = quests[start:start + SLOTS_PER_PAGE]
 
-        async def load_and_render():
-            all_progress = await quest_player.load_all_progress()
+        menu = Menu(MenuType.DOUBLE_CHEST, f"§6{category['name']}")
 
-            def render():
-                menu = Menu(MenuType.DOUBLE_CHEST, f"§6{category['name']}")
+        for slot, quest in enumerate(page_quests):
+            progress_data = quest_player.get_progress(quest.id)
+            item = self._create_quest_item(quest, progress_data)
 
-                for slot, quest in enumerate(page_quests):
-                    progress_data = all_progress.get(quest.id, {
-                        "target_progress": {}, "completed": False, "claimed": False, "unlocked": False
-                    })
-                    item = self._create_quest_item(quest, progress_data)
+            def make_click_handler(q=quest, qp=quest_player):
+                return lambda p, s, i, inv: self._handle_click(p, q, qp, category_id, page)
 
-                    def make_click_handler(q=quest, qp=quest_player):
-                        return lambda p, s, i, inv: self._handle_click(p, q, qp, category_id, page)
+            menu.set_item(slot, item, on_click=make_click_handler())
 
-                    menu.set_item(slot, item, on_click=make_click_handler())
+        self._fill_nav(
+            menu, page, total_pages,
+            on_prev=lambda p, s, i, inv: self._reopen_quests(p, quest_player, category_id, page - 1),
+            on_next=lambda p, s, i, inv: self._reopen_quests(p, quest_player, category_id, page + 1),
+            on_back=lambda p, s, i, inv: self._reopen_back(p, quest_player)
+        )
 
-                self._fill_nav(
-                    menu, page, total_pages,
-                    on_prev=lambda p, s, i, inv: self._reopen_quests(p, quest_player, category_id, page - 1),
-                    on_next=lambda p, s, i, inv: self._reopen_quests(p, quest_player, category_id, page + 1),
-                    on_back=lambda p, s, i, inv: self._reopen_back(p, quest_player)
-                )
-
-                menu.send_to(player)
-                self.active_menus[str(player.unique_id)] = menu
-
-            self.plugin.server.scheduler.run_task(self.plugin, render, delay=0)
-
-        endstone_asyncio.submit(load_and_render())
+        menu.set_close_listener(self._on_menu_close)
+        menu.send_to(player)
+        self.active_menus[str(player.unique_id)] = menu
 
     def _reopen_quests(self, player: Player, quest_player: QuestPlayer, category_id: str, page: int):
         uid = str(player.unique_id)
@@ -159,6 +157,7 @@ class QuestMenu:
         item = ItemStack("minecraft:paper")
         meta = item.item_meta
         meta.display_name = f"§6{quest.name}"
+
         lore = [f"§7{quest.description}"]
 
         if progress_data["completed"]:
@@ -184,27 +183,18 @@ class QuestMenu:
         return item
 
     def _handle_click(self, player: Player, quest: Quest, quest_player: QuestPlayer, category_id: str, page: int):
-        async def task():
-            progress = await quest_player.get_progress(quest.id)
+        progress = quest_player.get_progress(quest.id)
 
-            def on_main():
-                if progress["claimed"]:
-                    player.send_message("§cYa reclamaste esta misión, no puedes volverla a reclamar.")
-                    return
+        if progress["claimed"]:
+            player.send_message("§cYa reclamaste esta misión, no puedes volverla a reclamar.")
+            return
 
-                if quest_player.can_claim(quest.id):
-                    self.reward_handler.give_reward(player, quest)
-                    endstone_asyncio.submit(quest_player.claim_reward(quest.id))
-                    uid = str(player.unique_id)
-                    if uid in self.active_menus:
-                        self.active_menus[uid].close(player)
-                    self.open_quests_menu(player, quest_player, category_id, page)
-                else:
-                    player.send_message("§cAún no has completado esta misión.")
-
-            self.plugin.server.scheduler.run_task(self.plugin, on_main, delay=0)
-
-        endstone_asyncio.submit(task())
-
-    def remove_player(self, player: Player):
-        self.active_menus.pop(str(player.unique_id), None)
+        if quest_player.can_claim(quest.id):
+            self.reward_handler.give_reward(player, quest)
+            quest_player.claim_reward(quest.id)
+            uid = str(player.unique_id)
+            if uid in self.active_menus:
+                self.active_menus[uid].close(player)
+            self.open_quests_menu(player, quest_player, category_id, page)
+        else:
+            player.send_message("§cAún no has completado esta misión.")
