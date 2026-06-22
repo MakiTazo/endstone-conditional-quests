@@ -36,8 +36,8 @@ class QuestLoader:
             "icon": "minecraft:zombie_spawn_egg",
             "name": "Mob Quests",
             "quests": {
-                "zombie_slayer": {
-                    "name": "Zombie Slayer",
+                "zombie_slayer_1": {
+                    "name": "Zombie Slayer I",
                     "description": "Kill 500 zombies",
                     "conditions": [
                         "%jwstats_mob_kill_zombie% >= 500"
@@ -49,21 +49,19 @@ class QuestLoader:
                         ]
                     }
                 },
-                "villager_avenger": {
-                    "name": "Villager Avenger",
-                    "description": "Revenge for the villagers",
+                "zombie_slayer_2": {
+                    "name": "Zombie Slayer II",
+                    "description": "Kill 1000 zombies",
                     "conditions": [
-                        "%jwstats_mob_kill_pillager% >= 500",
-                        "%jwstats_mob_kill_ravager% >= 200",
-                        "%jwstats_mob_kill_evoker% >= 50"
+                        "%jwstats_mob_kill_zombie% >= 1000"
                     ],
                     "reward": {
                         "type": "command",
                         "value": [
-                            "give {player} minecraft:emerald 500"
+                            "give {player} minecraft:emerald 124"
                         ]
                     }
-                }
+                },
             }
         }
 

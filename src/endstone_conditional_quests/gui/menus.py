@@ -168,7 +168,6 @@ class QuestMenu:
         item = ItemStack("minecraft:paper")
         meta = item.item_meta
         meta.display_name = f"§6{quest.name}"
-
         lore = [f"§7{quest.description}"]
 
         if progress_data["completed"]:
